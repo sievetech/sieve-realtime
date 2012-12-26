@@ -43,15 +43,23 @@ redis.on("error", function (err) {
 
 /*************** SOCKET.IO/ ***************/
 
-io.on('disconnect', function(){	
-	//Já que a pessoa saiu, removemos ela da Hash
-	redis.hdel(this.now.room, this.user.clientId);		   
-});
+io.on('connection', function(user){	
 
-io.on('connect', function(){	
-	//Salvamos o recem-entrante no Redis em formato JSON e atualizamos a lista para todos nas 3 linhas seguintes
-	userInfo = JSON.stringify({ "nid": this.now.nid, "name": this.now.name, "initials": this.now.initials, "avatar": this.now.avatar, "avatar_big": this.now.avatar_big, "broadcasting": "false" });   
-	redis.hset(this.now.room, this.user.clientId, userInfo);  	   
+	//ids é um Array IDs das coisas que ele deve recever
+	userInfo = JSON.stringify({ "ids": [1,2,3,4,5] }); 
+
+	console.log("user_id: " + user.id);
+
+	//Adicionamos o usuário na lista de usuários conectados
+	redis.hset("rt_connected_users", user.id, userInfo);  	
+	 
+
+	user.on('disconnect', function () {
+		//Removemos o usuário da lista de usuários conectados	
+		console.log("DISCONNECTING... " + user.id)
+		redis.hdel("rt_connected_users", user.id);
+	});
+
 });
 
 /*** /socket.io ***/
