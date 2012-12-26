@@ -4,7 +4,8 @@ var express = require('express')
 , app = express()
 , server = require('http').createServer(app)
 , redis = require('redis').createClient()
-, io = require('socket.io').listen(server);
+, io = require('socket.io').listen(server)
+, _ = require ('underscore');
 
 
 app.configure('development', function(){
@@ -46,7 +47,7 @@ redis.on("error", function (err) {
 io.on('connection', function(user){	
 
 	//ids é um Array IDs das coisas que ele deve recever
-	userInfo = JSON.stringify({ "ids": [1,2,3,4,5] }); 
+	userInfo = JSON.stringify({ "ids": _.range(1, _.random(0, 1000), _.random(0, 50)) }); 
 
 	console.log("user_id: " + user.id);
 
