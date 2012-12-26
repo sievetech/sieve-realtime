@@ -5,14 +5,22 @@
 		<title>Sieve Realtime Client Example</title>
 
 		<script src="http://localhost:1337/socket.io/socket.io.js"></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+
 		<script>
 		  var socket = io.connect('http://localhost:1337'); 
+		  socket.on('something changed', function (message) {
+		  	console.log(message);
+		  	$('#stream').prepend("<p><img src='" + message.tx_image_url + "'/>" + message.nm_product + "</p>")      
+		  });
 		</script>
 
 	</head>
 
-	<body>
-		Exemplo de conexão com o Sieve Realtime
+	<body>		
+		<p><b>Exemplo com os últimos produtos atualizados:</b></p>
+		<div id="stream">
+		</div>
 	</body>
 
 </html>

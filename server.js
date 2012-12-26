@@ -5,8 +5,10 @@ var express = require('express')
 , server = require('http').createServer(app)
 , redis = require('redis').createClient()
 , io = require('socket.io').listen(server)
-, _ = require ('underscore');
+, _ = require ('underscore')
+, amqp = require('amqp');
 
+var fila = amqp.createConnection({ host: '50.57.175.89', 'login': 'cdp_stream', 'password': 'a5172d5b6518a96e59e19463b3a6561e'});
 
 app.configure('development', function(){
 	server.listen(1337, function(){
@@ -39,6 +41,24 @@ app.get('/', function(request, response) {
 redis.on("error", function (err) {
 	console.log("Redis Error " + err);
 });
+
+
+/*** /routes ***/
+
+
+
+/*************** QUEUE/ ***************/
+fila.addListener('ready', function(){
+	console.log("A fila está pronta!");
+    var queue = fila.queue('cdp_url_updater', {"passive": true}, function(queue){
+        queue.subscribe(function(message){
+            console.log("MUDANÇA RECEBIDA: ");
+            console.log(message);
+            io.sockets.emit('something changed', message);
+    	});
+	});
+});
+/*** /queue ***/
 
 
 
