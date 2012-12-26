@@ -8,6 +8,7 @@ var express = require('express')
 , _ = require ('underscore')
 , amqp = require('amqp');
 
+//todo: conectar-se na fila real
 var fila = amqp.createConnection({ host: '50.57.175.89', 'login': 'cdp_stream', 'password': 'a5172d5b6518a96e59e19463b3a6561e'});
 
 app.configure('development', function(){
@@ -48,6 +49,7 @@ redis.on("error", function (err) {
 
 
 /*************** QUEUE/ ***************/
+
 fila.addListener('ready', function(){
 	console.log("A fila está pronta!");
     var queue = fila.queue('cdp_url_updater', {"passive": true}, function(queue){
@@ -55,9 +57,12 @@ fila.addListener('ready', function(){
             console.log("MUDANÇA RECEBIDA: ");
             console.log(message);
             io.sockets.emit('something changed', message);
+            //todo: filtrar aqui pra quais usuários devemos mandar esse update. Somente aqueles que se interessarem pelo ID do produto.
+            //mandar pro canal da categoria, artefato e marca.
     	});
 	});
 });
+
 /*** /queue ***/
 
 
@@ -65,22 +70,62 @@ fila.addListener('ready', function(){
 /*************** SOCKET.IO/ ***************/
 
 io.on('connection', function(user){	
+	fake();
 
-	//ids é um Array IDs das coisas que ele deve recever
-	userInfo = JSON.stringify({ "ids": _.range(1, _.random(0, 1000), _.random(0, 50)) }); 
+    
+	//Autentica o usuário checando se a key que ele disse é a mesma do Redis
+    redis.get("user_key:" + user_id, function (err, obj) {	
 
-	console.log("user_id: " + user.id);
+    	obj = JSON.parse(obj); 
 
-	//Adicionamos o usuário na lista de usuários conectados
-	redis.hset("rt_connected_users", user.id, userInfo);  	
-	 
+    	if (obj === user_sent_key) {
+	    	console.log("PASSOU");
+
+	    	//Adiciona o usuário como online, com os produtos dele	    	
+	    	redis.hget("user_data", user_id, function (err, obj) {
+				obj = JSON.parse(obj);
+
+				//"products" é um Array IDs das coisas que ele deve receber				
+				userData = JSON.stringify({ 
+					"products": obj.products
+				});
+
+				//Adicionamos o usuário na lista de usuários conectados
+				redis.hset("online_users", user.id, userData);  		   
+
+			});	
+
+	    }
+	    else {
+	    	console.log("REJEITADO");
+	    }
+	});	
+
+
+
 
 	user.on('disconnect', function () {
 		//Removemos o usuário da lista de usuários conectados	
-		console.log("DISCONNECTING... " + user.id)
-		redis.hdel("rt_connected_users", user.id);
+		console.log("DISCONNECTING... " + user.id);
+
+		redis.hdel("online_users", user.id);
+
 	});
 
 });
 
 /*** /socket.io ***/
+
+
+fake = function() {
+	//enviado pelo usuário ao conectar-se
+	user_id = _.random(0, 99999);
+	user_sent_key = 12345;
+
+
+	//setado no Python	
+	redis.set("user_key:" + user_id, 12345, function (err, obj) {
+		redis.expire("user_key:" + user_id, 60)
+	});
+	redis.hset("user_data", user_id, JSON.stringify({products: _.range(1, _.random(0, 1000), _.random(0, 50)) }));
+}

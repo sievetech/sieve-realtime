@@ -9,6 +9,7 @@
 
 		<script>
 		  var socket = io.connect('http://localhost:1337'); 
+		  //antes de gerar essa tela, criamos (via Python) uma entrada no Redis com a ID, a key e a lista de produtos do usuário
 		  socket.on('something changed', function (message) {
 		  	console.log(message);
 		  	$('#stream').prepend("<p><img src='" + message.tx_image_url + "'/>" + message.nm_product + "</p>")      
