@@ -1,3 +1,6 @@
+//todo: Ser tudo que foi feito agora no namespace "/me". 
+// O namespace "" tem que ser generico pra passar tanto pro usuário quanto pra quando formos conectar direto pra receber categorias, artefatos e marcas
+
 /*************** SETUP/ ***************/
 
 var express = require('express')
@@ -40,7 +43,7 @@ app.get('/', function(request, response) {
 
 
 redis.on("error", function (err) {
-	console.log("Redis Error " + err);
+	console.log("Redis error: " + err);
 });
 
 
@@ -70,44 +73,50 @@ fila.addListener('ready', function(){
 /*************** SOCKET.IO/ ***************/
 
 io.on('connection', function(user){	
-	fake();
+
+	io.sockets.socket(user.id).emit('user infos', null, function (data) {
+		user_id = data.id;
+		user_sent_key = data.key;
+		fake();
+		//Autentica o usuário checando se a key que ele disse é a mesma do Redis
+	    redis.get("user_key:" + user_id, function (err, obj) {	
+	    	
+	    	obj = JSON.parse(obj); 
+
+	    	if (obj === user_sent_key) {
+		    	console.log("PASSOU");
+
+		    	//Adiciona o usuário como online, com os produtos dele	    	
+		    	redis.hget("user_data", user_id, function (err, obj) {
+					obj = JSON.parse(obj);
+
+					//"products" é um Array IDs das coisas que ele deve receber				
+					userData = JSON.stringify({ 
+						"products": obj.products
+					});
+
+					//Adicionamos o usuário na lista de usuários conectados
+					redis.hset("online_users", user.id, userData);  		   
+
+				});	
+
+		    }
+		    else {
+		    	console.log("REJEITADO");
+		    	user.disconnect();
+		    }
+		});	
+	});
 
     
-	//Autentica o usuário checando se a key que ele disse é a mesma do Redis
-    redis.get("user_key:" + user_id, function (err, obj) {	
-
-    	obj = JSON.parse(obj); 
-
-    	if (obj === user_sent_key) {
-	    	console.log("PASSOU");
-
-	    	//Adiciona o usuário como online, com os produtos dele	    	
-	    	redis.hget("user_data", user_id, function (err, obj) {
-				obj = JSON.parse(obj);
-
-				//"products" é um Array IDs das coisas que ele deve receber				
-				userData = JSON.stringify({ 
-					"products": obj.products
-				});
-
-				//Adicionamos o usuário na lista de usuários conectados
-				redis.hset("online_users", user.id, userData);  		   
-
-			});	
-
-	    }
-	    else {
-	    	console.log("REJEITADO");
-	    	user.disconnect();
-	    }
-	});	
+	
 
 
 
 
 	user.on('disconnect', function () {
 		//Removemos o usuário da lista de usuários conectados	
-		console.log("DISCONNECTING... " + user.id);
+		console.log("DESCONECTANDO... " + user.id);
 
 		redis.hdel("online_users", user.id);
 
@@ -119,11 +128,6 @@ io.on('connection', function(user){
 
 
 fake = function() {
-	//enviado pelo usuário ao conectar-se
-	user_id = _.random(0, 99999);
-	user_sent_key = 12345;
-
-
 	//setado no Python	
 	redis.set("user_key:" + user_id, 12345, function (err, obj) {
 		redis.expire("user_key:" + user_id, 60)
