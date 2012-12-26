@@ -98,6 +98,7 @@ io.on('connection', function(user){
 	    }
 	    else {
 	    	console.log("REJEITADO");
+	    	user.disconnect();
 	    }
 	});	
 
