@@ -70,7 +70,7 @@ io.on('connection', function(user) {
 	io.sockets.socket(user.id).emit('user infos', function(data) {
 		user_id = data.id;
 		user_sent_key = data.key;
-		user_room = data.room;
+		user_rooms = data.rooms;
 
 		fake();
 
@@ -95,10 +95,15 @@ io.on('connection', function(user) {
 					redis.hset("online_users", user.id, userData);
 				});	
 
-				if (user_room) {
-					console.log("Entrando na sala: " + user_room)
-					user.join(user_room);
-					io.sockets.in(user_room).emit('room joined', "Você entrou na Room: " + user_room);
+				if (user_rooms) {
+					console.log("Entrando na sala: " + user_rooms)
+
+					_.each(user_rooms, function(room) {
+						//todo: alguma lógica para verificar se o usuário tem permissão de entrar em tal sala. Ou até mesmo esse dado vir do Redis apenas (assim como o products acima)
+						user.join(room);
+						io.sockets.in(room).emit('room joined', "Você entrou na Room: " + room);
+					});
+					
 				}
 
 		    }
