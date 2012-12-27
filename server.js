@@ -9,16 +9,17 @@ var express = require('express')
   , _ = require ('underscore')
   , amqp = require('amqp');
 
-//todo: conectar-se na fila real
 var fila = amqp.createConnection({host: '192.168.1.101', 'login': 'guest', 'password': 'guest'});
 
 app.configure('development', function() {
+	node_env = "development";
 	server.listen(1337, function() {
 		console.log("Listening on port 1337");
 	});
 });
 
 app.configure('production', function() { 
+	node_env = "production";
 	server.listen(8080, function() {
 		console.log("Listening on port 8080");
 	});
@@ -63,12 +64,16 @@ fila.addListener('ready', function() {
 						console.log("AEEEEEEEEEEE VOCÊ FOI PREMIADO");
 						io.sockets.socket(k).emit('product updated', message);
 
-						io.sockets.socket(k).emit('system status', "Recebendo: " + message.product_id); //todo: não enviar mais isso
+						if (node_env == "development") {
+							io.sockets.socket(k).emit('system status', "Recebendo: " + message.product_id);
+						}
 					}
 					else {
 						console.log("ESSE PRODUTO NÃO ERA PRA VOCÊ");
-						//todo: não enviar nada
-						io.sockets.socket(k).emit('system status', message.product_id + " foi rejeitado..."); //todo: não enviar mais isso
+
+						if (node_env == "development") {												
+							io.sockets.socket(k).emit('system status', message.product_id + " foi rejeitado..."); //todo: não enviar mais isso
+						}
 					}
 				});
             });
@@ -94,7 +99,9 @@ io.on('connection', function(user) {
 		user_sent_key = data.key;
 		user_rooms = data.rooms;
 
-		fake();
+		if (node_env == "development") {												
+			fake();
+		}
 
 		//Autentica o usuário checando se a key que ele disse é a mesma do Redis
 	    redis.get("user_key:" + user_id, function(err, obj) {	
