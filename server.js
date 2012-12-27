@@ -51,10 +51,7 @@ fila.addListener('ready', function() {
 	console.log("A FILA ESTÁ PRONTA");
     var queue = fila.queue('cdp_realtime', {"passive": true}, function(queue) {
         queue.subscribe(function(message) {
-            console.log("MUDANÇA RECEBIDA: " + message);
-           
-            //todo: remover pois está enviando tudo pra todo mundo.
-            //io.sockets.emit('product updated', message);            
+            console.log("MUDANÇA RECEBIDA: " + message);       
 
             //Filtra pra quais usuários devemos mandar esse update. Somente aqueles que se interessarem pelo ID do produto.
             redis.hgetall("online_users", function(err, obj) {
@@ -64,7 +61,7 @@ fila.addListener('ready', function() {
 
 					if (_.contains(v.products, message.product_id)) {
 						console.log("AEEEEEEEEEEE VOCÊ FOI PREMIADO");
-						io.sockets.emit('product updated', message);
+						io.sockets.socket(k).emit('product updated', message);
 
 						io.sockets.socket(k).emit('system status', "Recebendo: " + message.product_id); //todo: não enviar mais isso
 					}
@@ -76,7 +73,7 @@ fila.addListener('ready', function() {
 				});
             });
 
-            //Envia pras salas respectivas de brand, category e artefact
+            //Envia pras salas respectivas de category, brand e artefact
             io.sockets.in("category/" + message.category_id).emit('category updated', message);
             io.sockets.in("brand/" + message.brand_id).emit('brand updated', message);
             io.sockets.in("artefact/" + message.artefact_id).emit('artefact updated', message);
