@@ -10,7 +10,7 @@ var express = require('express')
   , amqp = require('amqp');
 
 //todo: conectar-se na fila real
-var fila = amqp.createConnection({host: '50.57.175.89', 'login': 'cdp_stream', 'password': 'a5172d5b6518a96e59e19463b3a6561e'});
+var fila = amqp.createConnection({host: '50.57.175.89', 'login': 'sieve', 'password': '#dev@sieve5'});
 
 app.configure('development', function() {
 	server.listen(1337, function() {
@@ -49,12 +49,31 @@ redis.on("error", function(err) {
 
 fila.addListener('ready', function() {
 	console.log("A FILA ESTÁ PRONTA");
-    var queue = fila.queue('cdp_url_updater', {"passive": true}, function(queue) {
+    var queue = fila.queue('cdp_realtime', {"passive": true}, function(queue) {
         queue.subscribe(function(message) {
             console.log("MUDANÇA RECEBIDA: " + message);
-            io.sockets.emit('something changed', message);
-            //todo: filtrar aqui pra quais usuários devemos mandar esse update. Somente aqueles que se interessarem pelo ID do produto.
-            //mandar pro canal da categoria, artefato e marca.
+            io.sockets.emit('something changed', message);            
+
+            //Filtra pra quais usuários devemos mandar esse update. Somente aqueles que se interessarem pelo ID do produto.
+            redis.hgetall("online_users", function(err, obj) {
+				_.each(obj, function(v, k) {
+					//v é products e k é o socketID do usuário
+					v = JSON.parse(v);
+
+					if (_.contains(v.products, message.product_id)) {
+						console.log("AEEEEEEEEEEE VOCÊ FOI PREMIADO");
+						io.sockets.socket(k).emit('something changed', "Você foi premiado pois você está interessado no produto: " + message.product_id);
+					}
+					else {
+						console.log("ESSE PRODUTO NÃO ERA PRA VOCÊ");
+						io.sockets.socket(k).emit('something changed', "Esse produto não era pra chegar pra você, você nem queria o produto " + message.product_id + " mesmo...");
+					}
+				});
+            });
+
+            //todo: enviar pras salas respectivas de brand, category e artefact
+            //Exemplo:
+            //io.sockets.in("category/" + message.category_id).emit('product updated', message);
     	});
 	});
 });
@@ -96,17 +115,19 @@ io.on('connection', function(user) {
 				});	
 
 				if (user_rooms) {
-					console.log("Entrando na sala: " + user_rooms)
 
 					_.each(user_rooms, function(room) {
+						console.log("Entrando na sala: " + room)
 						//todo: alguma lógica para verificar se o usuário tem permissão de entrar em tal sala. Ou até mesmo esse dado vir do Redis apenas (assim como o products acima)
 						user.join(room);
-						io.sockets.in(room).emit('room joined', "Você entrou na Room: " + room);
+
+						//Emit pra essa sala 'room' e só pra esse usuário. Ou seja, só ele recebe e ele só recebe se estiver na Room mesmo!						
+						io.sockets.in(room).socket(user.id).emit('room joined', "Você entrou na Room: " + room); //todo: Remover esse emit pois era só pra testes
 					});
 					
 				}
-
 		    }
+
 		    else {
 		    	console.log("USUÁRIO REJEITADO");
 		    	user.disconnect();
