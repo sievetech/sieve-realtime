@@ -12,20 +12,16 @@ var express = require('express')
 //todo: conectar-se na fila real
 var fila = amqp.createConnection({host: '50.57.175.89', 'login': 'cdp_stream', 'password': 'a5172d5b6518a96e59e19463b3a6561e'});
 
-app.configure('development', function(){
-	server.listen(1337, function(){
+app.configure('development', function() {
+	server.listen(1337, function() {
 		console.log("Listening on port 1337");
 	});
-//	redis = require("redis").createClient();
-//	redis.auth("senha"); 
 });
 
-app.configure('production', function(){ 
-	server.listen(8080, function(){
+app.configure('production', function() { 
+	server.listen(8080, function() {
 		console.log("Listening on port 8080");
 	});
-//	redis = require("redis").createClient();
-//	redis.auth("senha); 
 });
 
 /*** /setup ***/
@@ -51,12 +47,11 @@ redis.on("error", function(err) {
 
 /*************** QUEUE/ ***************/
 
-fila.addListener('ready', function(){
-	console.log("A fila está pronta!");
-    var queue = fila.queue('cdp_url_updater', {"passive": true}, function(queue){
-        queue.subscribe(function(message){
-            console.log("MUDANÇA RECEBIDA: ");
-            console.log(message);
+fila.addListener('ready', function() {
+	console.log("A FILA ESTÁ PRONTA");
+    var queue = fila.queue('cdp_url_updater', {"passive": true}, function(queue) {
+        queue.subscribe(function(message) {
+            console.log("MUDANÇA RECEBIDA: " + message);
             io.sockets.emit('something changed', message);
             //todo: filtrar aqui pra quais usuários devemos mandar esse update. Somente aqueles que se interessarem pelo ID do produto.
             //mandar pro canal da categoria, artefato e marca.
@@ -70,11 +65,12 @@ fila.addListener('ready', function(){
 
 /*************** SOCKET.IO/ ***************/
 
-io.on('connection', function(user){	
+io.on('connection', function(user) {	
 
 	io.sockets.socket(user.id).emit('user infos', function(data) {
 		user_id = data.id;
 		user_sent_key = data.key;
+		user_room = data.room;
 
 		fake();
 
@@ -84,7 +80,7 @@ io.on('connection', function(user){
 	    	obj = JSON.parse(obj); 
 
 	    	if (obj === user_sent_key) {
-		    	console.log("PASSOU");
+		    	console.log("USUÁRIO AUTORIZADO");
 
 		    	//Adiciona o usuário como online, com os produtos dele	    	
 		    	redis.hget("user_data", user_id, function(err, obj) {
@@ -96,13 +92,18 @@ io.on('connection', function(user){
 					});
 
 					//Adicionamos o usuário na lista de usuários conectados
-					redis.hset("online_users", user.id, userData);  		   
-
+					redis.hset("online_users", user.id, userData);
 				});	
+
+				if (user_room) {
+					console.log("Entrando na sala: " + user_room)
+					user.join(user_room);
+					io.sockets.in(user_room).emit('room joined', "Você entrou na Room: " + user_room);
+				}
 
 		    }
 		    else {
-		    	console.log("REJEITADO");
+		    	console.log("USUÁRIO REJEITADO");
 		    	user.disconnect();
 		    }
 		});	
@@ -112,7 +113,7 @@ io.on('connection', function(user){
 
 	user.on('disconnect', function() {
 		//Removemos o usuário da lista de usuários conectados	
-		console.log("DESCONECTANDO... " + user.id);
+		console.log("DESCONECTANDO USUÁRIO: " + user.id);
 
 		redis.hdel("online_users", user.id);
 	});

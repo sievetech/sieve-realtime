@@ -12,7 +12,13 @@
 
 		  //antes de gerar essa tela, criamos (via Python) uma entrada no Redis com a ID, a key e a lista de produtos do usuário
 		  socket.on('user infos', function (fn) {
-		    fn({"id": Math.floor(Math.random()*11), "key": 12345});
+		    
+		    fn({
+		    	"id": Math.floor(Math.random()*11), 
+		    	"key": 12345,
+		    	"room": "category/8383"
+		    });
+
 		  });
 		  
 
@@ -20,6 +26,12 @@
 		  	console.log(message);
 		  	$('#stream').prepend("<p><img src='" + message.tx_image_url + "'/>" + message.nm_product + "</p>")      
 		  });
+
+		  socket.on('room joined', function (message) {
+		  	console.log(message);
+		  	$('#stream').prepend("<p>" + message + "</p>")      
+		  });
+
 
 		</script>
 
