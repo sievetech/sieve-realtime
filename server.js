@@ -10,7 +10,7 @@ var express = require('express')
   , amqp = require('amqp');
 
 //todo: conectar-se na fila real
-var fila = amqp.createConnection({host: '50.57.175.89', 'login': 'sieve', 'password': '#dev@sieve5'});
+var fila = amqp.createConnection({host: '192.168.1.101', 'login': 'guest', 'password': 'guest'});
 
 app.configure('development', function() {
 	server.listen(1337, function() {
