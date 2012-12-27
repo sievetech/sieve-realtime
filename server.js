@@ -52,7 +52,9 @@ fila.addListener('ready', function() {
     var queue = fila.queue('cdp_realtime', {"passive": true}, function(queue) {
         queue.subscribe(function(message) {
             console.log("MUDANÇA RECEBIDA: " + message);
-            io.sockets.emit('something changed', message);            
+           
+            //todo: remover pois está enviando tudo pra todo mundo.
+            //io.sockets.emit('product updated', message);            
 
             //Filtra pra quais usuários devemos mandar esse update. Somente aqueles que se interessarem pelo ID do produto.
             redis.hgetall("online_users", function(err, obj) {
@@ -62,18 +64,22 @@ fila.addListener('ready', function() {
 
 					if (_.contains(v.products, message.product_id)) {
 						console.log("AEEEEEEEEEEE VOCÊ FOI PREMIADO");
-						io.sockets.socket(k).emit('something changed', "Você foi premiado pois você está interessado no produto: " + message.product_id);
+						io.sockets.emit('product updated', message);
+
+						io.sockets.socket(k).emit('system status', "Recebendo: " + message.product_id); //todo: não enviar mais isso
 					}
 					else {
 						console.log("ESSE PRODUTO NÃO ERA PRA VOCÊ");
-						io.sockets.socket(k).emit('something changed', "Esse produto não era pra chegar pra você, você nem queria o produto " + message.product_id + " mesmo...");
+						//todo: não enviar nada
+						io.sockets.socket(k).emit('system status', message.product_id + " foi rejeitado..."); //todo: não enviar mais isso
 					}
 				});
             });
 
-            //todo: enviar pras salas respectivas de brand, category e artefact
-            //Exemplo:
-            //io.sockets.in("category/" + message.category_id).emit('product updated', message);
+            //Envia pras salas respectivas de brand, category e artefact
+            io.sockets.in("category/" + message.category_id).emit('category updated', message);
+            io.sockets.in("brand/" + message.brand_id).emit('brand updated', message);
+            io.sockets.in("artefact/" + message.artefact_id).emit('artefact updated', message);
     	});
 	});
 });
@@ -160,7 +166,8 @@ fake = function() {
 		"user_data", 
 		user_id, 
 		JSON.stringify({
-			products: _.range(1, _.random(0, 1000), _.random(0, 50)) 
+			//products: _.range(1, _.random(0, 1000), _.random(0, 50)) 
+			products: [14205, 14202, 14257, 14217, 27468, 1133, 1145, 34897, 28645, 22014, 24507, 55138, 1225, 34920, 1162, 25461]
 		})
 	);
 }

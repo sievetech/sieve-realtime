@@ -16,20 +16,30 @@
 		    fn({
 		    	"id": Math.floor(Math.random()*11), 
 		    	"key": 12345,
-		    	"rooms": ["category/8383", "category/1234"]
+		    	"rooms": ["category/802"]
 		    });
 
 		  });
 		  
 
-		  socket.on('something changed', function (message) {
+		  socket.on('product updated', function (message) {
 		  	console.log(message);
-		  	$('#stream').prepend("<p><img src='" + message.tx_image_url + "'/>" + message.nm_product + "</p>")      
+		  	$('#products').prepend("<p><img src='" + message.tx_image_url + "'/>" + message.nm_product + "</p>");
+		  });
+
+		  socket.on('category updated', function (message) {
+		  	console.log(message);
+		  	$('#categories').prepend("<p><img src='" + message.tx_image_url + "'/>" + message.nm_product + "</p>");
 		  });
 
 		  socket.on('room joined', function (message) {
 		  	console.log(message);
-		  	$('#stream').prepend("<p>" + message + "</p>")      
+		  	$('body').prepend("<p>" + message + "</p>")      
+		  });
+
+		  socket.on('system status', function (message) {
+		  	console.log(message);
+		  	$('body').prepend("<p>" + message + "</p>")      
 		  });
 
 
@@ -39,7 +49,15 @@
 
 	<body style="font-family: Arial">		
 		<p><b>Exemplo com os últimos produtos atualizados:</b></p>
-		<div id="stream">
+		<div style="float: left; background: #eee">
+			<div id="products">
+				Produtos:
+			</div>
+		</div>
+		<div style="float: left; background: #ddd">
+			Categorias:
+			<div id="categories">
+			</div>
 		</div>
 	</body>
 
