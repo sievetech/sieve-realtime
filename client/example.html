@@ -11,7 +11,7 @@
 		  var socket = io.connect('http://localhost:1337'); 		  
 
 		  //antes de gerar essa tela, criamos (via Python) uma entrada no Redis com a ID, a key e a lista de produtos do usuário
-		  socket.on('user infos', function (name, fn) {
+		  socket.on('user infos', function (fn) {
 		    fn({"id": Math.floor(Math.random()*11), "key": 12345});
 		  });
 		  

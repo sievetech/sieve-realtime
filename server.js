@@ -1,18 +1,16 @@
-//todo: Ser tudo que foi feito agora no namespace "/me". 
-// O namespace "" tem que ser generico pra passar tanto pro usuário quanto pra quando formos conectar direto pra receber categorias, artefatos e marcas
 
 /*************** SETUP/ ***************/
 
 var express = require('express')
-, app = express()
-, server = require('http').createServer(app)
-, redis = require('redis').createClient()
-, io = require('socket.io').listen(server)
-, _ = require ('underscore')
-, amqp = require('amqp');
+  , app = express()
+  , server = require('http').createServer(app)
+  , redis = require('redis').createClient()
+  , io = require('socket.io').listen(server)
+  , _ = require ('underscore')
+  , amqp = require('amqp');
 
 //todo: conectar-se na fila real
-var fila = amqp.createConnection({ host: '50.57.175.89', 'login': 'cdp_stream', 'password': 'a5172d5b6518a96e59e19463b3a6561e'});
+var fila = amqp.createConnection({host: '50.57.175.89', 'login': 'cdp_stream', 'password': 'a5172d5b6518a96e59e19463b3a6561e'});
 
 app.configure('development', function(){
 	server.listen(1337, function(){
@@ -42,7 +40,7 @@ app.get('/', function(request, response) {
 /*** /routes ***/
 
 
-redis.on("error", function (err) {
+redis.on("error", function(err) {
 	console.log("Redis error: " + err);
 });
 
@@ -74,12 +72,14 @@ fila.addListener('ready', function(){
 
 io.on('connection', function(user){	
 
-	io.sockets.socket(user.id).emit('user infos', null, function (data) {
+	io.sockets.socket(user.id).emit('user infos', function(data) {
 		user_id = data.id;
 		user_sent_key = data.key;
+
 		fake();
+
 		//Autentica o usuário checando se a key que ele disse é a mesma do Redis
-	    redis.get("user_key:" + user_id, function (err, obj) {	
+	    redis.get("user_key:" + user_id, function(err, obj) {	
 	    	
 	    	obj = JSON.parse(obj); 
 
@@ -87,7 +87,7 @@ io.on('connection', function(user){
 		    	console.log("PASSOU");
 
 		    	//Adiciona o usuário como online, com os produtos dele	    	
-		    	redis.hget("user_data", user_id, function (err, obj) {
+		    	redis.hget("user_data", user_id, function(err, obj) {
 					obj = JSON.parse(obj);
 
 					//"products" é um Array IDs das coisas que ele deve receber				
@@ -108,29 +108,32 @@ io.on('connection', function(user){
 		});	
 	});
 
-    
-	
 
 
-
-
-	user.on('disconnect', function () {
+	user.on('disconnect', function() {
 		//Removemos o usuário da lista de usuários conectados	
 		console.log("DESCONECTANDO... " + user.id);
 
 		redis.hdel("online_users", user.id);
-
 	});
 
 });
 
 /*** /socket.io ***/
 
-
+//Função "fake" executa coisas que em breve serão feitas por outros e de outra forma
 fake = function() {
-	//setado no Python	
-	redis.set("user_key:" + user_id, 12345, function (err, obj) {
+	//Setado no Python	
+	redis.set("user_key:" + user_id, 12345, function(err, obj) {
+		//Key expirando em 60 segundos
 		redis.expire("user_key:" + user_id, 60)
 	});
-	redis.hset("user_data", user_id, JSON.stringify({products: _.range(1, _.random(0, 1000), _.random(0, 50)) }));
+
+	redis.hset(
+		"user_data", 
+		user_id, 
+		JSON.stringify({
+			products: _.range(1, _.random(0, 1000), _.random(0, 50)) 
+		})
+	);
 }
